@@ -1,49 +1,51 @@
-import { response } from "express";
-import conn from "../config/conn.js";
-import { v4 as uuidv4 } from "uuid";
+const express = require('express');
+const app = express();
+app.use(express.json());
 
-export const listarPalestrantes = (req, res) => {
-  const sql = /*sql*/ `SELECT * FROM palestrantes`;
-  conn.query(sql, (err, data) => {
-    if (err) {
-      res.status(500).json({ message: "Erro ao buscar palestrantes" });
-      return;
-    }
-    const palestrantes = data;
-    res.status(200).json(palestrantes);
-  });
-};
+let eventos = [];  
 
-export const cadastrarPalestrantes = (req, res) => {
-  const { nome, expertise } = req.body;
 
-  if (!nome) {
-    res.status(400).json({ message: "O nome é obrigatório" });
-    return;
-  }
-  if (!expertise) {
-    res.status(400).json({ message: "A expertise é obrigatório" });
-    return;
-  }
-    const id = uuidv4();
-    const insertSQL = /*sql*/ ` INSERT INTO palestrantes (??,??,?? )
-    VALUES
-    (?,?,?)`;
-    const insertData = [
-      "id",
-      "nome",
-      "expertise",
-      id,
-      nome,
-      expertise,
-    ];
+app.post('/eventos', (req, res) => {
+    const { titulo, data, descricao, local, palestrantesId } = req.body;
+    const novoEvento = { id: eventos.length + 1, titulo, data, descricao, local, palestrantesId };
+    eventos.push(novoEvento);
+    res.status(201).json(novoEvento);
+});
 
-    conn.query(insertSQL, insertData, (err) => {
-      if (err) {
-        console.error(err);
-        res.status(500).json({ message: "erro ao Cadastrar palestrante" });
-        return;
-      }
-      res.status(201).json({ message: "palestrante cadastrado com sucesso" });
-    })
-}
+
+app.get('/eventos', (req, res) => {
+    res.json(eventos);
+});
+
+
+app.get('/eventos/:eventoId', (req, res) => {
+    const evento = eventos.find(e => e.id === parseInt(req.params.eventoId));
+    if (!evento) return res.status(404).send('Evento não encontrado.');
+    res.json(evento);
+});
+
+
+app.put('/eventos/:eventoId', (req, res) => {
+    const evento = eventos.find(e => e.id === parseInt(req.params.eventoId));
+    if (!evento) return res.status(404).send('Evento não encontrado.');
+    const { titulo, data, descricao, local, palestrantesId } = req.body;
+    evento.titulo = titulo || evento.titulo;
+    evento.data = data || evento.data;
+    evento.descricao = descricao || evento.descricao;
+    evento.local = local || evento.local;
+    evento.palestrantesId = palestrantesId || evento.palestrantesId;
+    res.json(evento);
+});
+
+
+app.delete('/eventos/:eventoId', (req, res) => {
+    const index = eventos.findIndex(e => e.id === parseInt(req.params.eventoId));
+    if (index === -1) return res.status(404).send('Evento não encontrado.');
+    eventos.splice(index, 1);
+    res.status(204).send();
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});
